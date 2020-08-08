@@ -91,8 +91,9 @@ pub fn already_downloaded(dir: &str) -> Result<HashSet<String>> {
         let entry = entry?;
         match entry.file_name().into_string() {
             Ok(name) => {
-                let index = name.find('.').unwrap();
-                result.insert(String::from(&name[0..index]));
+                if let Some(index) = name.find('.') {
+                    result.insert(String::from(&name[0..index]));
+                }
             }
             Err(_) => {
                 eprintln!(

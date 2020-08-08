@@ -1,3 +1,4 @@
+#![feature(iter_map_while)]
 #[allow(unused_imports)]
 #[macro_use]
 extern crate lazy_static;

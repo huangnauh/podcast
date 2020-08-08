@@ -273,6 +273,8 @@ impl State {
 pub struct Download {
     pub title: String,
     pub path: PathBuf,
+    pub content: String,
+    pub content_path: PathBuf,
     pub url: String,
     pub size: u64,
 }
@@ -284,14 +286,22 @@ impl Download {
         episode: &Episode,
     ) -> Result<Option<Download>> {
         let mut path = utils::get_podcast_dir()?;
+        let mut content_path = path.clone();
         path.push(podcast.title());
+        content_path.push(podcast.title());
         utils::create_dir_if_not_exist(&path)?;
         if let (Some(mut title), Some(url)) = (episode.title(), episode.url()) {
+            
+            let mut content_title = title.clone();
+            content_title = utils::append_extension(&content_title, "html");
+            content_path.push(&content_title);
+
             if let Some(ext) = episode.extension() {
                 title = utils::append_extension(&title, &ext);
             }
             path.push(&title);
 
+            let content = episode.content().unwrap_or("");
             let head_resp = state.client.head(url).send().await?;
             let total_size = head_resp
                 .headers()
@@ -304,6 +314,8 @@ impl Download {
                 return Ok(Some(Download {
                     title,
                     path,
+                    content: content.into(),
+                    content_path,
                     url: url.into(),
                     size: total_size,
                 }));
@@ -386,6 +398,13 @@ impl Episode {
         match self.0.enclosure() {
             Some(val) => Some(val.url()),
             None => None,
+        }
+    }
+
+    pub fn content(&self) -> Option<&str> {
+        match self.0.description() {
+            Some(content) => Some(content),
+            None => self.0.content() 
         }
     }
 

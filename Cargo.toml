@@ -40,3 +40,4 @@ bloom = "0.3"
 smol = { version = "0.1", features = ["tokio02"] }
 num_cpus = "1.13"
 term_size = "0.3.2"
+unicode-width = "0.1"

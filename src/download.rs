@@ -3,18 +3,23 @@ use crate::utils;
 
 use std::collections::HashSet;
 use std::io::{self, BufWriter, Write};
+use std::fs::File;
 
 use anyhow::Result;
 use futures::AsyncWriteExt;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use regex::Regex;
 use reqwest::{self, header};
+use unicode_width::UnicodeWidthChar;
 
 /// This handles downloading a single episode
 ///
 /// Not to be used in conjunction with download_multiple_episodes
 async fn download_episode(pb: ProgressBar, episode: Download) -> Result<()> {
     let title = truncate_title(&episode.title);
+    let mut file = File::create(&episode.content_path)?;
+    file.write(episode.content.as_bytes())?;
+
     pb.set_message(&title);
     pb.set_style(
         ProgressStyle::default_bar()
@@ -48,24 +53,32 @@ async fn download_episode(pb: ProgressBar, episode: Download) -> Result<()> {
 
 fn truncate_title(title: &str) -> String {
     let fix_char_len = 45;
-    let mut title = title.to_owned();
+    let mut max_chars = 40;
     if let Some((w, _)) = term_size::dimensions() {
         if fix_char_len < w {
-            let new_width = w - fix_char_len;
-            title.truncate(new_width);
+            max_chars = w-fix_char_len;
         } else {
-            title.truncate(10)
+            max_chars = 10
         }
-    } else {
-        title.truncate(40);
     }
-    title
+    let mut count = 0;
+    return title.char_indices().map_while(|(_, z)| {
+        count +=  z.width_cjk().unwrap();
+        if count <= max_chars {
+            Some(z)
+        } else {
+            None
+        }
+    }).collect();
 }
 
 /// Handles downloading a list of episodes on a single thread
 async fn download_multiple_episodes(pb: ProgressBar, episodes: Vec<Download>) -> Result<()> {
     let client = reqwest::Client::new();
     for (index, episode) in episodes.iter().enumerate() {
+        let mut file = File::create(&episode.content_path)?;
+        file.write(episode.content.as_bytes())?;
+        
         let title = truncate_title(&episode.title);
 
         pb.set_position(0);
