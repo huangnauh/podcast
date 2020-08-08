@@ -42,6 +42,10 @@ pub fn get_podcast_dir() -> Result<PathBuf> {
     }
 }
 
+pub fn is_only_html() -> bool {
+    env::var_os("ONLYHTML").is_some()
+}
+
 pub fn append_extension(filename: &str, ext: &str) -> String {
     let mut f = filename.to_string();
     if !f.ends_with('.') {

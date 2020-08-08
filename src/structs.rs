@@ -310,6 +310,15 @@ impl Download {
                 .and_then(|ct_len| ct_len.parse().ok())
                 .unwrap_or(0);
 
+            if utils::is_only_html() {
+                if !content_path.exists() {
+                    println!("{}", title);
+                    let mut file = File::create(&content_path)?;
+                    file.write(content.as_bytes())?;
+                }
+                return Ok(None)
+            }
+
             if !path.exists() {
                 return Ok(Some(Download {
                     title,
