@@ -16,17 +16,21 @@ use reqwest;
 use rss::Channel;
 use std::path::PathBuf;
 
-pub fn list_episodes(search: &str) -> Result<()> {
+pub fn list_episodes(state: &State, search: &str) -> Result<()> {
     let re = Regex::new(&format!("(?i){}", &search))?;
-    let path = utils::get_xml_dir()?;
-
-    for entry in fs::read_dir(&path)? {
-        let entry = entry?;
-        if re.is_match(&entry.file_name().into_string().unwrap()) {
-            let file = File::open(&entry.path())?;
+    for subscription in &state.subscriptions {
+        if re.is_match(subscription.title()) {
+            let mut path = utils::get_xml_dir()?;
+            let mut filename: String = subscription.title.clone();
+            filename.push_str(".xml");
+            path.push(filename);
+            let file = File::open(&path)?;
             let channel = Channel::read_from(BufReader::new(file))?;
             let podcast = Podcast::from(channel);
-            let episodes = podcast.episodes();
+            let mut episodes = podcast.episodes();
+            if subscription.reverse {
+                episodes.reverse()
+            }
             let stdout = io::stdout();
             let mut handle = stdout.lock();
             episodes
@@ -76,9 +80,12 @@ pub async fn update_subscription(
 
     let file = File::create(&podcast_rss_path)?;
     (*podcast).write_to(BufWriter::new(file))?;
-
-    if sub.num_episodes < podcast.episodes().len() {
-        let episodes = podcast.episodes()[..podcast.episodes().len() - sub.num_episodes].to_vec();
+    let mut episodes = podcast.episodes();
+    if sub.reverse {
+        episodes.reverse();
+    }
+    if sub.num_episodes < episodes.len() {
+        let episodes = episodes[..episodes.len() - sub.num_episodes].to_vec();
         let to_download = match config.download_subscription_limit {
             Some(subscription_limit) => {
                 let download_futures = episodes
@@ -107,7 +114,7 @@ pub async fn update_subscription(
         };
         download_episodes(to_download).await?;
     }
-    Ok([index, podcast.episodes().len()])
+    Ok([index, episodes.len()])
 }
 
 pub fn list_subscriptions(state: &State) -> Result<()> {

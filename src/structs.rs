@@ -7,7 +7,6 @@ use std::fs::{self, File};
 use std::io::{self, BufReader, BufWriter, Write};
 
 use crate::{download, utils};
-use bloom::ASMS;
 use chrono::prelude::*;
 use regex::Regex;
 use reqwest::header;
@@ -40,7 +39,7 @@ impl Default for Config {
     fn default() -> Self {
         Config {
             auto_download_limit: Some(1),
-            download_subscription_limit: Some(1),
+            download_subscription_limit: Some(0),
             quiet: Some(false),
         }
     }
@@ -64,6 +63,7 @@ pub struct Subscription {
     pub title: String,
     pub url: String,
     pub num_episodes: usize,
+    pub reverse: bool,
 }
 
 impl Subscription {
@@ -181,35 +181,38 @@ impl State {
         }
     }
 
-    pub async fn subscribe(&mut self, url: &str) -> Result<()> {
-        // Make a bloom filter and populate it with subscription titles
-        let existing_subscriptions = if self.subscriptions.is_empty() {
-            10
-        } else {
-            self.subscriptions.len()
-        };
-
-        let mut bloom_filter = bloom::BloomFilter::with_rate(0.1, existing_subscriptions as u32);
-        for sub in &self.subscriptions {
-            bloom_filter.insert(&sub.title);
+    fn find_in_subscriptions(&mut self, title: &str) -> Option<&mut Subscription> {
+        for subscription in &mut self.subscriptions {
+          if subscription.title() == title {
+              return Some(subscription)
+          }
         }
+        None
+    }
 
+    pub async fn subscribe(&mut self, url: &str, reverse: bool) -> Result<()> {
         // Fetch provided podcast RSS feed
         let resp = reqwest::get(url).await?.bytes().await?;
 
         // Parse the response into a podcast struct
         let channel = Channel::read_from(BufReader::new(&resp[..]))?;
         let podcast = Podcast::from(channel);
-
+        let subscription = self.find_in_subscriptions(podcast.title());
         // Check if the podcast already exists in our subscriptions
-        if !bloom_filter.contains(&podcast.title()) {
+        if !subscription.is_some() {
             self.subscriptions.push(Subscription {
                 title: String::from(podcast.title()),
                 url: String::from(url),
                 num_episodes: podcast.episodes().len(),
+                reverse: reverse,
             });
+        } else {
+            let mut subscription = subscription.unwrap();
+            subscription.url = String::from(url);
+            subscription.num_episodes = podcast.episodes().len();
+            subscription.reverse = reverse;
         }
-        let episodes = download::download_rss(self, url).await?;
+        let episodes = download::download_rss(self, url, reverse).await?;
         download::download_episodes(episodes).await?;
         Ok(())
     }
@@ -238,7 +241,7 @@ impl State {
     pub async fn check_for_update(&self) -> Result<()> {
         println!("Checking for updates...");
         let resp: String =
-            reqwest::get("https://raw.githubusercontent.com/njaremko/podcast/master/Cargo.toml")
+            reqwest::get("https://raw.githubusercontent.com/huangnauh/podcast/master/Cargo.toml")
                 .await?
                 .text()
                 .await?;
@@ -291,17 +294,24 @@ impl Download {
         content_path.push(podcast.title());
         utils::create_dir_if_not_exist(&path)?;
         if let (Some(mut title), Some(url)) = (episode.title(), episode.url()) {
-            
+            println!("{}", title);
             let mut content_title = title.clone();
             content_title = utils::append_extension(&content_title, "html");
             content_path.push(&content_title);
+            let content = episode.content().unwrap_or("");
+            if utils::is_only_html() {
+                if !content_path.exists() {
+                    let mut file = File::create(&content_path)?;
+                    file.write(content.as_bytes())?;
+                }
+                return Ok(None)
+            }
 
             if let Some(ext) = episode.extension() {
                 title = utils::append_extension(&title, &ext);
             }
             path.push(&title);
 
-            let content = episode.content().unwrap_or("");
             let head_resp = state.client.head(url).send().await?;
             let total_size = head_resp
                 .headers()
@@ -309,15 +319,6 @@ impl Download {
                 .and_then(|ct_len| ct_len.to_str().ok())
                 .and_then(|ct_len| ct_len.parse().ok())
                 .unwrap_or(0);
-
-            if utils::is_only_html() {
-                if !content_path.exists() {
-                    println!("{}", title);
-                    let mut file = File::create(&content_path)?;
-                    file.write(content.as_bytes())?;
-                }
-                return Ok(None)
-            }
 
             if !path.exists() {
                 return Ok(Some(Download {

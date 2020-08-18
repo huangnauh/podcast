@@ -116,6 +116,13 @@ pub fn get_app<'a, 'b>(version: &'a str) -> App<'a, 'b> {
                         .help("URL to RSS feed")
                         .required(true)
                         .index(1),
+                )
+                .arg(
+                    Arg::with_name("reverse")
+                        .short("r")
+                        .long("reverse")
+                        .help("Reverse podcasts")
+                        .required(false),
                 ),
         )
         .subcommand(
@@ -126,6 +133,13 @@ pub fn get_app<'a, 'b>(version: &'a str) -> App<'a, 'b> {
                         .help("URL to RSS feed")
                         .required(true)
                         .index(1),
+                )
+                .arg(
+                    Arg::with_name("reverse")
+                        .short("r")
+                        .long("reverse")
+                        .help("Reverse podcasts")
+                        .required(false),
                 ),
         )
         .subcommand(SubCommand::with_name("refresh").about("refresh subscribed podcasts"))

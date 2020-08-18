@@ -36,7 +36,6 @@ semver-parser = "0.9.0"
 podcast_search = "0.3"
 indicatif = "0.15.0"
 anyhow = "1.0"
-bloom = "0.3"
 smol = { version = "0.1", features = ["tokio02"] }
 num_cpus = "1.13"
 term_size = "0.3.2"

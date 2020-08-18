@@ -57,7 +57,10 @@ pub fn play_latest(state: &State, p_search: &str) -> Result<()> {
 
             let file: File = File::open(&path)?;
             let podcast: Podcast = Podcast::from(Channel::read_from(BufReader::new(file))?);
-            let episodes = podcast.episodes();
+            let mut episodes = podcast.episodes();
+            if subscription.reverse {
+                episodes.reverse();
+            }
             let episode = episodes[0].clone();
 
             filename = episode.title().unwrap();
@@ -88,7 +91,10 @@ pub fn play_episode_by_num(state: &State, p_search: &str, ep_num_string: &str) -
 
                 let file: File = File::open(&path).unwrap();
                 let podcast = Podcast::from(Channel::read_from(BufReader::new(file)).unwrap());
-                let episodes = podcast.episodes();
+                let mut episodes = podcast.episodes();
+                if subscription.reverse {
+                    episodes.reverse();
+                }
                 let episode = episodes[episodes.len() - ep_num].clone();
 
                 filename = episode.title().unwrap();
@@ -130,7 +136,10 @@ pub fn play_episode_by_name(state: &State, p_search: &str, ep_string: &str) -> R
             file.read_to_end(&mut content).unwrap();
 
             let podcast = Podcast::from(Channel::read_from(content.as_slice()).unwrap());
-            let episodes = podcast.episodes();
+            let mut episodes = podcast.episodes();
+            if subscription.reverse {
+                episodes.reverse();
+            }
             let filtered_episodes: Vec<&Episode> = episodes
                 .iter()
                 .filter(|ep| {

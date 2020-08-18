@@ -42,8 +42,12 @@ pub fn get_podcast_dir() -> Result<PathBuf> {
     }
 }
 
+pub fn is_exclude_html() -> bool {
+    env::var_os("EXCLUDE_HTML").is_some()
+}
+
 pub fn is_only_html() -> bool {
-    env::var_os("ONLYHTML").is_some()
+    env::var_os("ONLY_HTML").is_some()
 }
 
 pub fn append_extension(filename: &str, ext: &str) -> String {

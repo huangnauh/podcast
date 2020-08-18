@@ -16,10 +16,12 @@ use unicode_width::UnicodeWidthChar;
 ///
 /// Not to be used in conjunction with download_multiple_episodes
 async fn download_episode(pb: ProgressBar, episode: Download) -> Result<()> {
-    let title = truncate_title(&episode.title);
-    let mut file = File::create(&episode.content_path)?;
-    file.write(episode.content.as_bytes())?;
+    if !utils::is_exclude_html() {
+        let mut file = File::create(&episode.content_path)?;
+        file.write(episode.content.as_bytes())?;
+    }
 
+    let title = truncate_title(&episode.title);
     pb.set_message(&title);
     pb.set_style(
         ProgressStyle::default_bar()
@@ -76,11 +78,12 @@ fn truncate_title(title: &str) -> String {
 async fn download_multiple_episodes(pb: ProgressBar, episodes: Vec<Download>) -> Result<()> {
     let client = reqwest::Client::new();
     for (index, episode) in episodes.iter().enumerate() {
-        let mut file = File::create(&episode.content_path)?;
-        file.write(episode.content.as_bytes())?;
-        
-        let title = truncate_title(&episode.title);
+        if !utils::is_exclude_html() {
+            let mut file = File::create(&episode.content_path)?;
+            file.write(episode.content.as_bytes())?;
+        }
 
+        let title = truncate_title(&episode.title);
         pb.set_position(0);
         pb.set_length(episode.size);
         pb.set_message(&title);
@@ -151,7 +154,10 @@ pub async fn download_range(
     for subscription in &state.subscriptions {
         if re_pod.is_match(&subscription.title) {
             let podcast = Podcast::from_title(&subscription.title)?;
-            let episodes = podcast.episodes();
+            let mut episodes = podcast.episodes();
+            if subscription.reverse {
+                episodes.reverse();
+            }
             let episodes_to_download = parse_download_episodes(e_search)?;
 
             for ep_num in episodes_to_download {
@@ -168,17 +174,6 @@ pub async fn download_range(
     Ok(downloads)
 }
 
-fn find_matching_podcast(state: &State, p_search: &str) -> Result<Option<Podcast>> {
-    let re_pod = Regex::new(&format!("(?i){}", &p_search))?;
-    for subscription in &state.subscriptions {
-        if re_pod.is_match(&subscription.title) {
-            let podcast = Podcast::from_title(&subscription.title)?;
-            return Ok(Some(podcast));
-        }
-    }
-    Ok(None)
-}
-
 pub async fn download_episode_by_num(
     state: &State,
     p_search: &str,
@@ -190,7 +185,10 @@ pub async fn download_episode_by_num(
         for subscription in &state.subscriptions {
             if re_pod.is_match(&subscription.title) {
                 let podcast = Podcast::from_title(&subscription.title)?;
-                let episodes = podcast.episodes();
+                let mut episodes = podcast.episodes();
+                if subscription.reverse {
+                    episodes.reverse();
+                }
                 if let Some(ep) =
                     Download::new(&state, &podcast, &episodes[episodes.len() - ep_num]).await?
                 {
@@ -218,7 +216,10 @@ pub async fn download_episode_by_name(
     for subscription in &state.subscriptions {
         if re_pod.is_match(&subscription.title) {
             let podcast = Podcast::from_title(&subscription.title)?;
-            let episodes = podcast.episodes();
+            let mut episodes = podcast.episodes();
+            if subscription.reverse {
+                episodes.reverse();
+            }
             let filtered_episodes =
                 episodes
                     .iter()
@@ -269,11 +270,14 @@ pub async fn download_all(state: &State, p_search: &str) -> Result<Vec<Download>
             path.push(podcast.title());
 
             for downloaded in utils::already_downloaded(podcast.title()) {
-                let episodes = podcast.episodes();
+                let mut episodes = podcast.episodes();
+                if subscription.reverse {
+                    episodes.reverse();
+                }
                 for e in episodes
                     .iter()
                     .filter(|e| e.title().is_some())
-                    .filter(|e| !downloaded.contains(&e.title().unwrap()))
+                    .filter(|e| !downloaded.contains(&e.title().unwrap()) || utils::is_only_html())
                 {
                     if let Some(ep) = Download::new(&state, &podcast, &e).await? {
                         downloads.push(ep);
@@ -291,18 +295,25 @@ pub async fn download_latest(
     latest: usize,
 ) -> Result<Vec<Download>> {
     let mut downloads = vec![];
-    if let Some(podcast) = find_matching_podcast(state, p_search)? {
-        let episodes = podcast.episodes();
-        for episode in &episodes[..latest] {
-            if let Some(ep) = Download::new(&state, &podcast, &episode).await? {
-                downloads.push(ep);
+    let re_pod = Regex::new(&format!("(?i){}", &p_search))?;
+    for subscription in &state.subscriptions {
+        if re_pod.is_match(&subscription.title) {
+            let podcast = Podcast::from_title(&subscription.title)?;
+            let mut episodes = podcast.episodes();
+            if subscription.reverse {
+                episodes.reverse();
+            }
+            for episode in &episodes[..latest] {
+                if let Some(ep) = Download::new(&state, &podcast, &episode).await? {
+                    downloads.push(ep);
+                }
             }
         }
     }
     Ok(downloads)
 }
 
-pub async fn download_rss(state: &State, url: &str) -> Result<Vec<Download>> {
+pub async fn download_rss(state: &State, url: &str, reverse: bool) -> Result<Vec<Download>> {
     let channel = utils::download_rss_feed(url).await?;
     let mut download_limit = state.config.auto_download_limit.unwrap_or(1) as usize;
     let mut downloads = vec![];
@@ -313,7 +324,10 @@ pub async fn download_rss(state: &State, url: &str) -> Result<Vec<Download>> {
             download_limit
         );
         let podcast = Podcast::from(channel);
-        let episodes = podcast.episodes();
+        let mut episodes = podcast.episodes();
+        if reverse {
+            episodes.reverse();
+        }
         if episodes.len() < download_limit {
             download_limit = episodes.len()
         }

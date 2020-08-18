@@ -69,7 +69,7 @@ pub async fn download(state: State, matches: &ArgMatches<'_>) -> Result<State> {
 
 pub fn list(state: State, matches: &ArgMatches) -> Result<State> {
     match matches.value_of("PODCAST") {
-        Some(regex) => list_episodes(regex)?,
+        Some(regex) => list_episodes(&state, regex)?,
         None => list_subscriptions(&state)?,
     }
     Ok(state)
@@ -92,11 +92,12 @@ pub fn play(state: State, matches: &ArgMatches) -> Result<State> {
 
 pub async fn subscribe(state: State, matches: &ArgMatches<'_>) -> Result<State> {
     let url = matches.value_of("URL").unwrap();
-    sub(state, url).await
+    let reverse = matches.is_present("reverse");
+    sub(state, url, reverse).await
 }
 
-async fn sub(mut state: State, url: &str) -> Result<State> {
-    state.subscribe(url).await?;
+async fn sub(mut state: State, url: &str, reverse: bool) -> Result<State> {
+    state.subscribe(url, reverse).await?;
     Ok(state)
 }
 
@@ -170,14 +171,6 @@ pub async fn search(state: State, matches: &ArgMatches<'_>) -> Result<State> {
         }
     }
 
-    print!("Would you like to subscribe to any of these? (y/n): ");
-    io::stdout().flush().ok();
-    let mut input = String::new();
-    io::stdin().read_line(&mut input)?;
-    if input.to_lowercase().trim() != "y" {
-        return Ok(state);
-    }
-
     print!("Which one? (#): ");
     io::stdout().flush().ok();
     let mut num_input = String::new();
@@ -190,7 +183,46 @@ pub async fn search(state: State, matches: &ArgMatches<'_>) -> Result<State> {
 
     let rss_resp = &resp.results[n];
     match &rss_resp.feed_url {
-        Some(r) => sub(state, &r).await,
+        Some(r) => {
+            print!("List before subscribe? (y/n): ");
+            io::stdout().flush().ok();
+            let mut input = String::new();
+            io::stdin().read_line(&mut input)?;
+            if input.to_lowercase().trim() == "y" {
+                let podcast = Podcast::from_url(&r).unwrap();
+                let stdout = io::stdout();
+                let mut handle = stdout.lock();
+                let episodes = podcast.episodes();
+                episodes
+                .iter()
+                .filter(|ep| ep.title().is_some())
+                .enumerate()
+                .for_each(|(num, ep)| {
+                    writeln!(
+                        &mut handle,
+                        "({}) {}",
+                        episodes.len() - num,
+                        ep.title().unwrap()
+                    )
+                    .ok();
+                });
+            }
+
+            print!("Would you like to (reverse) subscribe? (y/r/n): ");
+            io::stdout().flush().ok();
+            let mut input = String::new();
+            io::stdin().read_line(&mut input)?;
+            let o = input.to_lowercase();
+            let o = o.trim();
+            let mut reverse = false;
+            if o == "r" {
+                reverse = true;
+            } else if o != "y" {
+                return Ok(state);
+            }
+
+            sub(state, &r, reverse).await
+        }
         None => {
             eprintln!("Subscription failed. No url in API response.");
             return Ok(state);
