@@ -3,7 +3,7 @@ use clap::{App, Arg, SubCommand};
 pub fn get_app<'a, 'b>(version: &'a str) -> App<'a, 'b> {
     App::new("podcast")
         .version(version)
-        .author("Nathan J. <njaremko@gmail.com>")
+        .author("huangnauh <ihuanglgnauh@gmail.com>")
         .about("A command line podcast manager")
         .arg(
             Arg::with_name("quiet")

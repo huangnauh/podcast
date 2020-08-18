@@ -1,17 +1,17 @@
 [package]
 name = "podcast"
 edition = "2018"
-version = "0.17.6"
-authors = ["Nathan Jaremko <njaremko@gmail.com>"]
+version = "0.18.0"
+authors = ["Nathan Jaremko <njaremko@gmail.com>", "huangnauh <ihuanglgnauh@gmail.com>"]
 description = "A command line podcast manager"
 license = "GPL-3.0"
 readme = "README.md"
 keywords = ["audio", "cli", "podcast", "music"]
-repository = "https://github.com/njaremko/podcast"
+repository = "https://github.com/huangnauh/podcast"
 categories = ["command-line-utilities"]
 
 [badges]
-travis-ci = { repository = "njaremko/podcast" }
+travis-ci = { repository = "huangnauh/podcast" }
 
 [[bin]]
 bench = false
@@ -40,3 +40,4 @@ smol = { version = "0.1", features = ["tokio02"] }
 num_cpus = "1.13"
 term_size = "0.3.2"
 unicode-width = "0.1"
+

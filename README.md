@@ -2,7 +2,7 @@
  ---
 `podcast` is a command line podcast manager and player.
  
-Binaries can be found here: https://github.com/njaremko/podcast/releases
+Binaries can be found here: https://github.com/huangnauh/podcast/releases
 
 Otherwise, install [rustup](https://rustup.rs/), then run `cargo install podcast`
  
@@ -100,7 +100,7 @@ $ sudo mv podcast.fish /usr/share/fish/completions
 # Building
 Building requires nightly rust
 ```sh
-git clone git@github.com:njaremko/podcast.git
+git clone git@github.com:huangnauh/podcast.git
 cd podcast
 cargo install --path=. --force
 ```

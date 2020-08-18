@@ -1,3 +1,7 @@
+0.18.0
+- Download shownotes of an episode
+- Reverse episodes when subscribed
+
 0.17.6
 - Fix mpv CLI argument to not show image popup
 
