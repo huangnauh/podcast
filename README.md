@@ -7,7 +7,12 @@ Binaries can be found here: https://github.com/huangnauh/podcast/releases
 Otherwise, install [rustup](https://rustup.rs/), then run `cargo install podcast`
  
 NOTE: Playback requires either mpv or vlc to be installed
- 
+
+## Demo
+
+![Demo](doc/podcast.svg)
+
+## Features
 It currently supports:
 - [x] Subscribing to RSS feeds
 - [x] Searching for podcasts
@@ -24,6 +29,7 @@ It currently supports:
     - [x] powershell
     - [x] elvish
 
+
 By default, podcasts are downloaded to `$HOME/Podcasts`, but this folder can be set with the `$PODCAST` environmental variable.
 
 How many latest episodes to download when first subscribing to new podcasts can be set in the `$PODCAST/.subscriptions.json` file
@@ -39,7 +45,7 @@ All: `podcast download $podcast_name`
 You can also use a portion of the name. 
 Podcast will pick the first podcast alphabetically that contains the given word (Case-Insensitive).
 
-# Example Usage:
+## Example Usage:
 ```sh
 $ podcast search my brother my brother and me
 Using PODCAST dir: "/Users/jaremn/Podcasts"
@@ -86,7 +92,7 @@ Using PODCAST dir: "/Users/jaremn/Podcasts"
 [00:08:17] My Brother, My Brother and Me 44: Chunk Pump.mp3 [95.76KB/s] [441.53KB/46.85MB]
 ```
 
-# Generating completions:
+## Generating completions:
 ```sh
 # Generating completion for current shell:
 $ podcast completion
@@ -97,7 +103,7 @@ $ podcast completion fish > podcast.fish
 $ sudo mv podcast.fish /usr/share/fish/completions
 ```
 
-# Building
+## Building
 Building requires nightly rust
 ```sh
 git clone git@github.com:huangnauh/podcast.git
