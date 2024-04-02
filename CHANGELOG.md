@@ -1,4 +1,18 @@
-0.19.4
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+This project adheres to [Semantic Versioning](https://semver.org).
+
+<!--
+Note: In this file, do not use the hard wrap in the middle of a sentence for compatibility with GitHub comment style markdown rendering.
+-->
+
+## [0.20.0]
+- release
+
+
+## [0.19.4]
 - Updating dependencies
 - Adding the ability to configure file name templates, initially supporting `{title}` and `{number}`
 ```sh
@@ -9,13 +23,13 @@ podcast download <podcast name> --template "{title}-{number}"
 podcast download <podcast name> --pattern ".*goldfish.*"
 ```
 
-0.19.0
+## [0.19.0]
 - Migrate from `smol` to `tokio`, makes life easier
 
-0.18.1
+## [0.18.1]
 - Some minor internal refactoring to clean stuff up
 
-0.18.0
+## [0.18.0]
 - Update a bunch of dependencies to latest version
 
 0.17.6
